@@ -1,54 +1,133 @@
-import { ConnectWallet } from "@thirdweb-dev/react";
+import { ConnectWallet, useAddress, useContract, useTotalCirculatingSupply, Web3Button, useTotalCount, useActiveClaimCondition, useContractMetadata } from "@thirdweb-dev/react";
 import type { NextPage } from "next";
-import styles from "../styles/Home.module.css";
+import { GOTO_ADDRESS } from "../const/gopoAddress";
+import { useState } from "react";
+import styles from "../styles/Theme.module.css";
+import { formatUnits, parseUnits } from "ethers/lib/utils";
 
 const Home: NextPage = () => {
-  return (
-    <div className={styles.container}>
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://thirdweb.com/">thirdweb</a>!
-        </h1>
+  const address= useAddress();
 
-        <p className={styles.description}>
-          Get started by configuring your desired network in{" "}
-          <code className={styles.code}>pages/_app.tsx</code>, then modify the{" "}
-          <code className={styles.code}>pages/index.tsx</code> file!
-        </p>
+  const { contract:gocontract } = useContract(GOTO_ADDRESS);
+  console.log(gocontract);
+  
+  const { data: totalCirculatingSupply } = useTotalCirculatingSupply(gocontract,0);
+  console.log(totalCirculatingSupply);
 
-        <div className={styles.connect}>
-          <ConnectWallet />
-        </div>
+  const { data: count } = useTotalCount(gocontract);
+  console.log(count);
+  const { data: activeClaimCondition } = useActiveClaimCondition(gocontract);
 
-        <div className={styles.grid}>
-          <a href="https://portal.thirdweb.com/" className={styles.card}>
-            <h2>Portal &rarr;</h2>
-            <p>
-              Guides, references and resources that will help you build with
-              thirdweb.
-            </p>
-          </a>
+  const { data: contractMetadata } = useContractMetadata(gocontract);
 
-          <a href="https://thirdweb.com/dashboard" className={styles.card}>
-            <h2>Dashboard &rarr;</h2>
-            <p>
-              Deploy, configure and manage your smart contracts from the
-              dashboard.
-            </p>
-          </a>
 
-          <a
-            href="https://portal.thirdweb.com/templates"
-            className={styles.card}
-          >
-            <h2>Templates &rarr;</h2>
-            <p>
-              Discover and clone template projects showcasing thirdweb features.
-            </p>
-          </a>
-        </div>
-      </main>
+  const [quantity, setQuantity] = useState(1);
+  
+ //check price
+  const price = parseUnits(
+    activeClaimCondition?.currencyMetadata.displayValue || "0",
+    activeClaimCondition?.currencyMetadata.decimals
+  );
+ // Multiply depending on quantity
+  const priceToMint = price.mul(quantity);
+
+  
+return (
+
+ <div style={{maxWidth: 200 }} >
+  <ConnectWallet  >
+   
+  </ConnectWallet>
+
+
+  <div className={styles.container}>
+  <div className={styles.imageSide}>
+          {/* Image Preview of NFTs */}
+          <img
+            className={styles.image}
+            src={contractMetadata?.image}
+            alt={`${contractMetadata?.name} preview image`}
+          />
+    
+  <div className={styles.mintCompletionArea}>
+  
+
+   
+<div className={styles.mintAreaLeft}>
+
+
+
+    <p>Total Minted:  </p>
+
+      {activeClaimCondition && activeClaimCondition ? (
+       <p>
+       {/* Claimed supply so far */}
+       <b>{activeClaimCondition?.currentMintSupply}</b>
+          {" / "}
+          {
+          // Add unclaimed and claimed supply to get the total supply
+            activeClaimCondition?.availableSupply
+           }
+           </p>):(
+                // Show loading state if we're still loading the supply
+                <p>Loading...</p>
+              )}
+</div>
+</div>
+
+                <div className={styles.quantityContainer}>
+                  <button
+                  className={`${styles.quantityControlButton}`}
+                    onClick={() => setQuantity(quantity - 1)}
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+
+                  <h4>{quantity}</h4>
+
+                  <button
+                  className={`${styles.quantityControlButton}`}
+                    onClick={() => setQuantity(quantity + 1)}
+                    disabled={
+                      quantity >=
+                      parseInt(
+                        activeClaimCondition?.quantityLimitPerTransaction || "0"
+                      )
+                    }
+                  >
+                    +
+                  </button>
+                </div>
+     <Web3Button
+  contractAddress={GOTO_ADDRESS}
+  action={(contract) => contract.erc721.claimTo(address!, quantity)}
+   // If the function is successful, we can do something here.
+   onSuccess={(result) =>
+    alert(
+      `Successfully minted ${result.length} NFT${
+        result.length > 1 ? "s" : ""
+      }!`
+    )
+  }
+  // If the function fails, we can do something here.
+  onError={(error) => alert(error?.message)}>
+  {`Mint${quantity > 1 ? ` ${quantity}` : ""}${
+                      activeClaimCondition?.price.eq(0)
+                        ? " (Free)"
+                        : activeClaimCondition?.currencyMetadata.displayValue
+                        ? ` (${formatUnits(
+                            priceToMint,
+                            activeClaimCondition.currencyMetadata.decimals
+                          )} ${activeClaimCondition?.currencyMetadata.symbol})`
+                        : ""
+                    }`}
+
+ </Web3Button>
     </div>
+    </div>
+   </div>
+    
   );
 };
 
