@@ -30,6 +30,12 @@ const Home: NextPage = () => {
   );
  // Multiply depending on quantity
   const priceToMint = price.mul(quantity);
+   // Check if there's any NFTs left
+   const isSoldOut = activeClaimCondition?.currentMintSupply === activeClaimCondition?. maxQuantity;
+   // Check if there's NFTs left on the active claim phase
+  const isNotReady =
+  activeClaimCondition &&
+  parseInt(activeClaimCondition?.availableSupply) === 0;
 
   
 return (
@@ -66,7 +72,7 @@ return (
           {" / "}
           {
           // Add unclaimed and claimed supply to get the total supply
-            activeClaimCondition?.availableSupply
+            activeClaimCondition?. maxQuantity
            }
            </p>):(
                 // Show loading state if we're still loading the supply
@@ -74,6 +80,21 @@ return (
               )}
 </div>
 </div>
+
+
+          {/* Show claim button or connect wallet button */}
+          {
+            // Sold out or show the claim button
+            isSoldOut ? (
+              <div>
+                <h2>Sold Out</h2>
+              </div>
+            ) : isNotReady ? (
+              <div>
+                <h2>Not ready to be minted yet</h2>
+              </div>
+            ) : (
+              <>
 
                 <div className={styles.quantityContainer}>
                   <button
@@ -111,7 +132,9 @@ return (
     )
   }
   // If the function fails, we can do something here.
-  onError={(error) => alert(error?.message)}>
+  onError={(error) => alert(error?.message)}
+  
+  >
   {`Mint${quantity > 1 ? ` ${quantity}` : ""}${
                       activeClaimCondition?.price.eq(0)
                         ? " (Free)"
@@ -124,6 +147,8 @@ return (
                     }`}
 
  </Web3Button>
+ </>)}
+
     </div>
     </div>
    </div>
